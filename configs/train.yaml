@@ -1,0 +1,8 @@
+seed: 42
+
+data_dir: ./dataset
+output_dir: ./out
+
+save_interval: 10000
+n_steps: 100000
+batch_size: 8
