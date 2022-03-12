@@ -9,7 +9,7 @@ class Discriminator(hk.Module):
     def __init__(
         self,
         dim=32,
-        n_layers=5,
+        n_layers=3,
         channels=3
     ):
         super(Discriminator, self).__init__()
