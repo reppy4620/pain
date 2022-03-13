@@ -70,13 +70,13 @@ class Updater:
         _, fake_logits = jnp.split(real_and_fake_logits, 2, axis=0)
         fake_probs = jax.nn.softmax(fake_logits)[:, 1]
         real_hidden, fake_hidden = hiddens[:len(hiddens)], hiddens[len(hiddens):]
+        gan_loss = -jnp.mean(fake_probs)
+        recon_loss = jnp.mean((fake - y) ** 2)
         fm_loss = 0
         for r_h, f_h in zip(real_hidden, fake_hidden):
-            fm_loss += jnp.abs(r_h - f_h)
+            fm_loss += jnp.abs(jax.lax.stop_gradient(r_h) - f_h)
         fm_loss /= len(real_hidden)
-        gan_loss = jnp.mean(-jnp.log(fake_probs))
-        recon_loss = jnp.mean((fake - y) ** 2)
-        return gan_loss + recon_loss + fm_loss
+        return gan_loss + recon_loss * 10 + fm_loss
 
     def d_loss(self, d_params, g_params, batch):
         x, y = batch['x'], batch['y']
@@ -86,15 +86,10 @@ class Updater:
         real_and_fake_logits, _ = self.d.apply(d_params, real_and_fake)
         real_logits, fake_logits = jnp.split(real_and_fake_logits, 2, axis=0)
 
-        # Class 1 is real.
-        real_labels = jnp.ones((real_logits.shape[0],), dtype=jnp.int32)
-        real_loss = sparse_softmax_cross_entropy(real_logits, real_labels)
+        real_loss = jnp.mean(jax.nn.relu(1 - real_logits))
+        fake_loss = jnp.mean(jax.nn.relu(1 + fake_logits))
 
-        # Class 0 is fake.
-        fake_labels = jnp.zeros((fake_logits.shape[0],), dtype=jnp.int32)
-        fake_loss = sparse_softmax_cross_entropy(fake_logits, fake_labels)
-
-        return jnp.mean(real_loss + fake_loss)
+        return real_loss + fake_loss
 
     @functools.partial(jax.jit, static_argnums=0)
     def init(self, rng, batch):

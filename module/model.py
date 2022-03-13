@@ -28,7 +28,7 @@ class Discriminator(hk.Module):
             if i < len(self.in_out) - 1:
                 x = hk.Conv2D(out_dim, kernel_shape=4, stride=2)(x)
         x = jnp.mean(x, axis=(1, 2))
-        x = hk.Linear(2)(x)
+        x = hk.Linear(1)(x)
         return x, h
 
 
