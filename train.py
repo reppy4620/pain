@@ -18,8 +18,8 @@ from module.dataset import load_dataset
 
 
 def sparse_softmax_cross_entropy(logits, labels):
-  one_hot_labels = jax.nn.one_hot(labels, logits.shape[-1])
-  return -jnp.sum(one_hot_labels * jax.nn.log_softmax(logits), axis=-1)
+    one_hot_labels = jax.nn.one_hot(labels, logits.shape[-1])
+    return -jnp.sum(one_hot_labels * jax.nn.log_softmax(logits), axis=-1)
 
 
 class State(NamedTuple):
@@ -174,8 +174,8 @@ def main():
         print(f'Loaded {state.step} checkpoint')
 
     print('Starting training loop')
-    bar = tqdm(total=config.n_steps+1 - int(state.step))
-    for step in range(state.step, config.n_steps+1):
+    bar = tqdm(total=config.n_steps + 1 - int(state.step))
+    for step in range(state.step, config.n_steps + 1):
         bar.set_description_str(f'Step: {step}')
         data = next(ds)
         loss_dict, state = updater.update(state, data)
@@ -183,7 +183,7 @@ def main():
         bar.set_postfix_str(f'{", ".join([f"{k}: {v:.6f}" for k, v in loss_dict.items()])}')
 
         if (step + 1) % config.save_interval == 0:
-            state.save(output_dir / f'n_{step:07d}.ckpt')
+            state.save(output_dir / f'n_{step + 1:07d}.ckpt')
 
 
 if __name__ == '__main__':

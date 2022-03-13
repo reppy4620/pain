@@ -36,15 +36,15 @@ class UNet(hk.Module):
     def __init__(
         self,
         dim=32,
-        dim_mults=(1, 2, 4, 8),
+        n_layers=4,
         channels=3
     ):
         super(UNet, self).__init__()
         self.dim = dim
-        dims = [channels, *map(lambda m: dim * m, dim_mults)]
+        self.n_layers = n_layers
+        dims = [channels, *map(lambda m: dim * m, [2 ** i for i in range(self.n_layers)])]
         self.in_out = list(zip(dims[:-1], dims[1:]))
         self.mid_dim = self.in_out[-1][1]
-        self.dim_mults = dim_mults
         self.channels = channels
 
     def __call__(self, x):
