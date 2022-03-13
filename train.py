@@ -68,13 +68,12 @@ class Updater:
         real_and_fake = jnp.concatenate([y, fake], axis=0)
         real_and_fake_logits, hiddens = self.d.apply(d_params, real_and_fake)
         _, fake_logits = jnp.split(real_and_fake_logits, 2, axis=0)
-        fake_probs = jax.nn.softmax(fake_logits)[:, 1]
         real_hidden, fake_hidden = hiddens[:len(hiddens)], hiddens[len(hiddens):]
-        gan_loss = -jnp.mean(fake_probs)
+        gan_loss = -jnp.mean(fake_logits)
         recon_loss = jnp.mean((fake - y) ** 2)
         fm_loss = 0
         for r_h, f_h in zip(real_hidden, fake_hidden):
-            fm_loss += jnp.abs(jax.lax.stop_gradient(r_h) - f_h)
+            fm_loss += jnp.abs(r_h - f_h)
         fm_loss /= len(real_hidden)
         return gan_loss + recon_loss * 10 + fm_loss
 
