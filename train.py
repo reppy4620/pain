@@ -62,10 +62,12 @@ class Updater:
         self.g_opt: optax.GradientTransformation = g_opt
         self.d_opt: optax.GradientTransformation = d_opt
 
-    def g_loss(self, g_params, d_params, batch, hiddens):
+    def g_loss(self, g_params, d_params, batch):
         x, y = batch['x'], batch['y']
         fake = self.g.apply(g_params, x)
-        fake_logits, _ = self.d.apply(d_params, fake)
+        real_and_fake = jnp.concatenate([y, fake], axis=0)
+        real_and_fake_logits, hiddens = self.d.apply(d_params, real_and_fake)
+        _, fake_logits = jnp.split(real_and_fake_logits, 2, axis=0)
         fake_probs = jax.nn.softmax(fake_logits)[:, 1]
         real_hidden, fake_hidden = hiddens[:len(hiddens)], hiddens[len(hiddens):]
         fm_loss = 0
@@ -81,7 +83,7 @@ class Updater:
         fake = self.g.apply(g_params, x)
 
         real_and_fake = jnp.concatenate([y, fake], axis=0)
-        real_and_fake_logits, hiddens = self.d.apply(d_params, real_and_fake)
+        real_and_fake_logits, _ = self.d.apply(d_params, real_and_fake)
         real_logits, fake_logits = jnp.split(real_and_fake_logits, 2, axis=0)
 
         # Class 1 is real.
@@ -92,7 +94,7 @@ class Updater:
         fake_labels = jnp.zeros((fake_logits.shape[0],), dtype=jnp.int32)
         fake_loss = sparse_softmax_cross_entropy(fake_logits, fake_labels)
 
-        return jnp.mean(real_loss + fake_loss), hiddens
+        return jnp.mean(real_loss + fake_loss)
 
     @functools.partial(jax.jit, static_argnums=0)
     def init(self, rng, batch):
@@ -116,11 +118,11 @@ class Updater:
 
     @functools.partial(jax.jit, static_argnums=0)
     def update(self, state: State, batch: dict):
-        (loss_d, hiddens), grads = jax.value_and_grad(self.d_loss, has_aux=True)(state.d_params, state.g_params, batch)
+        loss_d, grads = jax.value_and_grad(self.d_loss)(state.d_params, state.g_params, batch)
         updates, d_opt_state = self.d_opt.update(grads, state.d_opt_state)
         d_params = optax.apply_updates(state.d_params, updates)
 
-        loss_g, grads = jax.value_and_grad(self.g_loss)(state.g_params, state.d_params, batch, hiddens)
+        loss_g, grads = jax.value_and_grad(self.g_loss)(state.g_params, state.d_params, batch)
         updates, g_opt_state = self.g_opt.update(grads, state.g_opt_state)
         g_params = optax.apply_updates(state.g_params, updates)
         state = State(

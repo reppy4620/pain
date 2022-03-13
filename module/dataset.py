@@ -1,4 +1,3 @@
-import random
 import tensorflow as tf
 from pathlib import Path
 from typing import Union, Tuple
